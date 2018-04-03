@@ -1,6 +1,6 @@
 import json
 import mechanicalsoup
-import http.cookiejar
+from requests.cookies import RequestsCookieJar
 from bs4 import BeautifulSoup
 from flask import Flask, request, make_response
 
@@ -33,8 +33,23 @@ def logging_in():
 
     return response
 
+@app.route("/data")
 def get_data():
-    return ''
+    if "session" in request.cookies:
+        cookie = ''.join(reversed(request.cookies["session"][0:10])) + request.cookies["session"][10:]
+        cj = RequestsCookieJar()
+        cj.set("PHPSESSID", cookie)
+        browser = mechanicalsoup.StatefulBrowser()
+        browser.set_cookiejar(cj)
+        browser.open('http://siakad.poltektedc.ac.id/politeknik/mahasiswa.php')
+        data = {}
+        data["bio"] = {}
+        data["bio"]["nama"] = browser.get_current_page().select('td[colspan] table[align] td strong')[0].text
+        data["bio"]["jurusan"] = browser.get_current_page().select('td[colspan] table[align] td strong')[1].text
+        data["bio"]["angkatan"] = browser.get_current_page().select('td[colspan] table[align] td strong')[2].text
+        return str(data)
+    else:
+        return 'tydac'
 
 
 if __name__=='__main__':
