@@ -66,11 +66,13 @@ def get_data():
         if isInLoginPage(browser.get_current_page()):
             return jsonify({"status":"failed"})
 
+        bioData = browser.get_current_page().select('td[colspan] table[align] td strong')
         data = {}
         data["bio"] = {}
-        data["bio"]["nama"] = browser.get_current_page().select('td[colspan] table[align] td strong')[0].text
-        data["bio"]["jurusan"] = browser.get_current_page().select('td[colspan] table[align] td strong')[1].text
-        data["bio"]["angkatan"] = browser.get_current_page().select('td[colspan] table[align] td strong')[3].text
+        data["bio"]["name"] = bioData[0].text
+        data["bio"]["program"] = bioData[1].text
+        data["bio"]["concentration"] = bioData[2].text
+        data["bio"]["class"] = bioData[3].text
         data["news"] = []
 
         newsLen = len(browser.get_current_page().select('table[bgcolor="#AAEB83"]'))
@@ -79,14 +81,22 @@ def get_data():
             data["news"].append({
                 "date": browser.get_current_page()
                 .select('table[bgcolor="#AAEB83"]')[i]
-                .select('tr:nth-of-type(1)')[0].text,
+                .select('tr:nth-of-type(1)')[0].text[1:-1],
                 "title": browser.get_current_page()
                 .select('table[bgcolor="#AAEB83"]')[i]
-                .select('tr:nth-of-type(2)')[0].text,
-                "body": str(browser.get_current_page()
-                            .select('tr[bgcolor="#C1EBFF"]')[i]
-                            .select('td:nth-of-type(3)')[0])
+                .select('tr:nth-of-type(2)')[0].text[1:-1],
+                "body": []
             })
+            body = ''.join(c for c in browser.get_current_page()
+                    .select('tr[bgcolor="#C1EBFF"]')[i]
+                    .select('td:nth-of-type(3)')[0].text if c not in '\r\t')
+            j = -1
+            for c in body:
+                if c == '\n':
+                    data["news"][i]["body"].append('')
+                    j += 1
+                else:
+                    data["news"][i]["body"][j] += c
             i += 1
 
         return jsonify(data)
@@ -100,7 +110,6 @@ def get_grades():
 
     gradeTables = browser.get_current_page().select('table[border="1"]')[1]
     data = {
-        "name": gradeTables.select('tr')[0].text,
         "semester": [],
     }
 
@@ -114,10 +123,10 @@ def get_grades():
             i += 1
         data["semester"][i].append({
             "no": item.select('td')[0].text,
-            "code": item.select('td')[1].text,
+            "code": item.select('td')[1].text[6:-4],
             "name": item.select('td')[3].text,
-            "credit": item.select('td')[4].text,
-            "grade": item.select('td option["selected"]')[0].text,
+            "credit": item.select('td')[4].text[6:-4],
+            "grade": item.select('td option["selected"]')[0].text[:-8],
         })
 
     return jsonify(data)
