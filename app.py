@@ -56,6 +56,23 @@ def get_data():
         data["bio"]["nama"] = browser.get_current_page().select('td[colspan] table[align] td strong')[0].text
         data["bio"]["jurusan"] = browser.get_current_page().select('td[colspan] table[align] td strong')[1].text
         data["bio"]["angkatan"] = browser.get_current_page().select('td[colspan] table[align] td strong')[3].text
+        data["news"] = []
+
+        newsLen = len(browser.get_current_page().select('table[bgcolor="#AAEB83"]'))
+        i = 0
+        while i < newsLen:
+            data["news"].append({
+                "date": browser.get_current_page()
+                            .select('table[bgcolor="#AAEB83"]')[i]
+                            .select('tr:nth-of-type(1)')[0].text,
+                "title": browser.get_current_page()
+                             .select('table[bgcolor="#AAEB83"]')[i]
+                             .select('tr:nth-of-type(2)')[0].text,
+                "body": str(browser.get_current_page()
+                            .select('tr[bgcolor="#C1EBFF"]')[i]
+                            .select('td:nth-of-type(3)')[0])
+            })
+            i += 1
 
         return jsonify(data)
     else:
