@@ -1,9 +1,29 @@
-import mechanicalsoup
-from requests.cookies import RequestsCookieJar
-from bs4 import BeautifulSoup
 from flask import Flask, request, make_response, jsonify
 
 app = Flask(__name__)
+
+def setupBrowserWithCookie(cookie):
+    import mechanicalsoup
+    from requests.cookies import RequestsCookieJar
+
+    # Use cookie from client request, with slight edit
+    c = ''.join(reversed(cookie[0:10])) + cookie[10:]
+    cj = RequestsCookieJar()
+    cj.set("PHPSESSID", c)
+
+    # Setup browser, use cookie from client
+    browser = mechanicalsoup.StatefulBrowser()
+    browser.set_cookiejar(cj)
+
+    return browser
+
+def isInLoginPage(page):
+    page = str(page)
+    if 'form action="/politeknik/mahasiswa.php"' in page:
+        return True
+    else:
+        return False
+
 
 @app.route("/")
 def hello():
@@ -11,6 +31,7 @@ def hello():
 
 @app.route("/login", methods=["POST"])
 def logging_in():
+    import mechanicalsoup
 
     # Fill login form and submit
     browser = mechanicalsoup.StatefulBrowser()
@@ -21,12 +42,12 @@ def logging_in():
     browser.submit_selected()
 
     # Get the cookie from target website if login not failed
-    page = str(browser.get_current_page())
-    if '<form action="/politeknik/mahasiswa.php"' in page:
+    if isInLoginPage(browser.get_current_page()):
         response = make_response('{"status":"failed"}', 200)
     else:
         cj = browser.get_cookiejar()
         cookie = ""
+
         for c in cj:
             cookie = c.value
 
@@ -35,23 +56,17 @@ def logging_in():
 
     return response
 
-@app.route("/data")
+@app.route("/data/")
 def get_data():
     if "session" in request.cookies:
-
-        # Use cookie from client request, with slight edit
-        cookie = ''.join(reversed(request.cookies["session"][0:10])) + request.cookies["session"][10:]
-        cj = RequestsCookieJar()
-        cj.set("PHPSESSID", cookie)
-
-        # Setup browser, use cookie from client
-        browser = mechanicalsoup.StatefulBrowser()
-        browser.set_cookiejar(cj)
-
-        data = {}
+        browser = setupBrowserWithCookie(request.cookies["session"])
 
         # Get data from mahasiswa.php page
         browser.open('http://siakad.poltektedc.ac.id/politeknik/mahasiswa.php')
+        if isInLoginPage(browser.get_current_page()):
+            return jsonify({"status":"failed"})
+
+        data = {}
         data["bio"] = {}
         data["bio"]["nama"] = browser.get_current_page().select('td[colspan] table[align] td strong')[0].text
         data["bio"]["jurusan"] = browser.get_current_page().select('td[colspan] table[align] td strong')[1].text
@@ -63,11 +78,11 @@ def get_data():
         while i < newsLen:
             data["news"].append({
                 "date": browser.get_current_page()
-                            .select('table[bgcolor="#AAEB83"]')[i]
-                            .select('tr:nth-of-type(1)')[0].text,
+                .select('table[bgcolor="#AAEB83"]')[i]
+                .select('tr:nth-of-type(1)')[0].text,
                 "title": browser.get_current_page()
-                             .select('table[bgcolor="#AAEB83"]')[i]
-                             .select('tr:nth-of-type(2)')[0].text,
+                .select('table[bgcolor="#AAEB83"]')[i]
+                .select('tr:nth-of-type(2)')[0].text,
                 "body": str(browser.get_current_page()
                             .select('tr[bgcolor="#C1EBFF"]')[i]
                             .select('td:nth-of-type(3)')[0])
@@ -76,8 +91,30 @@ def get_data():
 
         return jsonify(data)
     else:
-        return 'tydac'
+        return jsonify({"status":"failed"})
 
+@app.route("/data/grades/")
+def get_grades():
+    browser = setupBrowserWithCookie(request.cookies["session"])
+    browser.open('http://siakad.poltektedc.ac.id/politeknik/khs.php')
+
+    gradeTables = browser.get_current_page().select('table[border="1"]')[1]
+    data = {
+        "name": gradeTables.select('tr')[0].text,
+        "semester": [],
+    }
+
+    find=lambda x: x and (x == "#CCFDCC") or (x == "#FFD2D2")
+    for i in gradeTables.find_all('tr', bgcolor=find):
+        data["semester"].append({
+            "no": i.select('td')[0].text,
+            "code": i.select('td')[1].text,
+            "name": i.select('td')[2].text,
+            "credit": i.select('td')[3].text,
+            "grade": i.select('td option["selected"]')[0].text,
+        })
+
+    return jsonify(data)
 
 if __name__=='__main__':
     app.run()
