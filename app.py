@@ -104,14 +104,20 @@ def get_grades():
         "semester": [],
     }
 
+    i = -1
     find=lambda x: x and (x == "#CCFDCC") or (x == "#FFD2D2")
-    for i in gradeTables.find_all('tr', bgcolor=find):
-        data["semester"].append({
-            "no": i.select('td')[0].text,
-            "code": i.select('td')[1].text,
-            "name": i.select('td')[2].text,
-            "credit": i.select('td')[3].text,
-            "grade": i.select('td option["selected"]')[0].text,
+    for item in gradeTables.find_all('tr', bgcolor=find):
+
+        # Mark no.1 as starting point for list of grades in a semester
+        if item.select('td')[0].text == "1":
+            data["semester"].append([])
+            i += 1
+        data["semester"][i].append({
+            "no": item.select('td')[0].text,
+            "code": item.select('td')[1].text,
+            "name": item.select('td')[3].text,
+            "credit": item.select('td')[4].text,
+            "grade": item.select('td option["selected"]')[0].text,
         })
 
     return jsonify(data)
