@@ -43,7 +43,7 @@ def logging_in():
 
     # Get the cookie from target website if login not failed
     if isInLoginPage(browser.get_current_page()):
-        response = make_response('{"status":"failed"}', 403)
+        response = make_response(jsonify({"status":"failed"}), 403)
     else:
         cj = browser.get_cookiejar()
         cookie = ""
@@ -51,7 +51,7 @@ def logging_in():
         for c in cj:
             cookie = c.value
 
-        response = make_response('{"status":"success"}', 200)
+        response = make_response(jsonify({"status":"success"}), 200)
         response.set_cookie('session', value=''.join(reversed(cookie[0:10])) + cookie[10:])
 
     return response
@@ -64,7 +64,7 @@ def get_data():
         # Get data from mahasiswa.php page
         browser.open('http://siakad.poltektedc.ac.id/politeknik/mahasiswa.php')
         if isInLoginPage(browser.get_current_page()):
-            return jsonify({"status":"failed"})
+            return make_response(jsonify({"status":"failed"}), 403)
 
         bioData = browser.get_current_page().select('td[colspan] table[align] td strong')
         data = {}
@@ -99,9 +99,9 @@ def get_data():
                     data["news"][i]["body"][j] += c
             i += 1
 
-        return jsonify(data)
+        return make_response(jsonify(data), 200)
     else:
-        return jsonify({"status":"failed"}, 403)
+        return make_response(jsonify({"status":"failed"}), 403)
 
 @app.route("/data/grades/")
 def get_grades():
@@ -109,7 +109,7 @@ def get_grades():
        browser = setupBrowserWithCookie(request.cookies["session"])
        browser.open('http://siakad.poltektedc.ac.id/politeknik/khs.php')
        if isInLoginPage(browser.get_current_page()):
-           return jsonify({"status":"failed"})
+           return make_response(jsonify({"status":"failed"}), 403)
 
        gradeTables = browser.get_current_page().select('table[border="1"]')[1]
        data = {
@@ -132,9 +132,9 @@ def get_grades():
                "grade": item.select('td option["selected"]')[0].text[:-8],
            })
 
-       return jsonify(data)
+       return make_response(jsonify(data), 200)
     else:
-        return jsonify({"status":"failed"}, 403)
+        return make_response(jsonify({"status":"failed"}), 403)
 
 if __name__=='__main__':
     app.run()
