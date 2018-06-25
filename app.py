@@ -19,7 +19,8 @@ def setupBrowserWithCookie(cookie):
 
 def isInLoginPage(page):
     page = str(page)
-    if 'form action="/politeknik/mahasiswa.php"' in page:
+    if ('<tr><td colspan="2"> Silahkan Login:' in page) \
+    or ('Error, please contact site administrator' in page):
         return True
     else:
         return False
@@ -88,8 +89,8 @@ def get_data():
                 "body": []
             })
             body = ''.join(c for c in browser.get_current_page()
-                    .select('tr[bgcolor="#C1EBFF"]')[i]
-                    .select('td:nth-of-type(3)')[0].text if c not in '\r\t')
+                           .select('tr[bgcolor="#C1EBFF"]')[i]
+                           .select('td:nth-of-type(3)')[0].text if c not in '\r\t')
             j = -1
             for c in body:
                 if c == '\n':
@@ -106,33 +107,33 @@ def get_data():
 @app.route("/data/grades/")
 def get_grades():
     if "session" in request.cookies:
-       browser = setupBrowserWithCookie(request.cookies["session"])
-       browser.open('http://siakad.poltektedc.ac.id/politeknik/khs.php')
-       if isInLoginPage(browser.get_current_page()):
-           return make_response(jsonify({"status":"failed"}), 403)
+        browser = setupBrowserWithCookie(request.cookies["session"])
+        browser.open('http://siakad.poltektedc.ac.id/politeknik/khs.php')
+        if isInLoginPage(browser.get_current_page()):
+            return make_response(jsonify({"status":"failed"}), 403)
 
-       gradeTables = browser.get_current_page().select('table[border="1"]')[1]
-       data = {
-           "semester": [],
-       }
+        gradeTables = browser.get_current_page().select('table[border="1"]')[1]
+        data = {
+            "semester": [],
+        }
 
-       i = -1
-       find=lambda x: x and (x == "#CCFDCC") or (x == "#FFD2D2")
-       for item in gradeTables.find_all('tr', bgcolor=find):
+        i = -1
+        find=lambda x: x and (x == "#CCFDCC") or (x == "#FFD2D2")
+        for item in gradeTables.find_all('tr', bgcolor=find):
 
-           # Mark no.1 as starting point for list of grades in a semester
-           if item.select('td')[0].text == "1":
-               data["semester"].append([])
-               i += 1
-           data["semester"][i].append({
-               "no": item.select('td')[0].text,
-               "code": item.select('td')[1].text[6:-4],
-               "name": item.select('td')[3].text,
-               "credit": item.select('td')[4].text[6:-4],
-               "grade": item.select('td option["selected"]')[0].text[:-8],
-           })
+            # Mark no.1 as starting point for list of grades in a semester
+            if item.select('td')[0].text == "1":
+                data["semester"].append([])
+                i += 1
+            data["semester"][i].append({
+                "no": item.select('td')[0].text,
+                "code": item.select('td')[1].text[6:-4],
+                "name": item.select('td')[3].text,
+                "credit": item.select('td')[4].text[6:-4],
+                "grade": item.select('td option["selected"]')[0].text[:-8],
+            })
 
-       return make_response(jsonify(data), 200)
+        return make_response(jsonify(data), 200)
     else:
         return make_response(jsonify({"status":"failed"}), 403)
 
