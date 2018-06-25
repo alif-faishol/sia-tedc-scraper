@@ -43,7 +43,7 @@ def logging_in():
 
     # Get the cookie from target website if login not failed
     if isInLoginPage(browser.get_current_page()):
-        response = make_response('{"status":"failed"}', 200)
+        response = make_response('{"status":"failed"}', 403)
     else:
         cj = browser.get_cookiejar()
         cookie = ""
@@ -101,35 +101,40 @@ def get_data():
 
         return jsonify(data)
     else:
-        return jsonify({"status":"failed"})
+        return jsonify({"status":"failed"}, 403)
 
 @app.route("/data/grades/")
 def get_grades():
-    browser = setupBrowserWithCookie(request.cookies["session"])
-    browser.open('http://siakad.poltektedc.ac.id/politeknik/khs.php')
+    if "session" in request.cookies:
+       browser = setupBrowserWithCookie(request.cookies["session"])
+       browser.open('http://siakad.poltektedc.ac.id/politeknik/khs.php')
+       if isInLoginPage(browser.get_current_page()):
+           return jsonify({"status":"failed"})
 
-    gradeTables = browser.get_current_page().select('table[border="1"]')[1]
-    data = {
-        "semester": [],
-    }
+       gradeTables = browser.get_current_page().select('table[border="1"]')[1]
+       data = {
+           "semester": [],
+       }
 
-    i = -1
-    find=lambda x: x and (x == "#CCFDCC") or (x == "#FFD2D2")
-    for item in gradeTables.find_all('tr', bgcolor=find):
+       i = -1
+       find=lambda x: x and (x == "#CCFDCC") or (x == "#FFD2D2")
+       for item in gradeTables.find_all('tr', bgcolor=find):
 
-        # Mark no.1 as starting point for list of grades in a semester
-        if item.select('td')[0].text == "1":
-            data["semester"].append([])
-            i += 1
-        data["semester"][i].append({
-            "no": item.select('td')[0].text,
-            "code": item.select('td')[1].text[6:-4],
-            "name": item.select('td')[3].text,
-            "credit": item.select('td')[4].text[6:-4],
-            "grade": item.select('td option["selected"]')[0].text[:-8],
-        })
+           # Mark no.1 as starting point for list of grades in a semester
+           if item.select('td')[0].text == "1":
+               data["semester"].append([])
+               i += 1
+           data["semester"][i].append({
+               "no": item.select('td')[0].text,
+               "code": item.select('td')[1].text[6:-4],
+               "name": item.select('td')[3].text,
+               "credit": item.select('td')[4].text[6:-4],
+               "grade": item.select('td option["selected"]')[0].text[:-8],
+           })
 
-    return jsonify(data)
+       return jsonify(data)
+    else:
+        return jsonify({"status":"failed"}, 403)
 
 if __name__=='__main__':
     app.run()
