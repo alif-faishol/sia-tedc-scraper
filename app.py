@@ -44,7 +44,7 @@ def logging_in():
 
     # Get the cookie from target website if login not failed
     if isInLoginPage(browser.get_current_page()):
-        response = make_response(jsonify({"status":"failed"}), 403)
+        response = make_response(jsonify({"status":"failed"}), 401)
     else:
         cj = browser.get_cookiejar()
         cookie = ""
@@ -55,6 +55,12 @@ def logging_in():
         response = make_response(jsonify({"status":"success"}), 200)
         response.set_cookie('session', value=''.join(reversed(cookie[0:10])) + cookie[10:])
 
+    return response
+
+@app.route("/logout")
+def logout():
+    response = make_response(jsonify({"status":"success"}), 200)
+    response.set_cookie('session', value='invalid', expires=0)
     return response
 
 @app.route("/data/")

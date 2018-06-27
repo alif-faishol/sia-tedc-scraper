@@ -1,1 +1,1 @@
-web: gunicorn -w 3 app:app
+web: pipenv run gunicorn -w 3 -k gevent app:app
