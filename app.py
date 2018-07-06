@@ -65,7 +65,7 @@ def logout():
 
 @app.route("/data/")
 def get_data():
-    if "session" in request.cookies:
+    if "session" in request.cookies and len(request.cookies['session']) > 10:
         browser = setupBrowserWithCookie(request.cookies["session"])
 
         # Get data from mahasiswa.php page
@@ -112,7 +112,7 @@ def get_data():
 
 @app.route("/data/grades/")
 def get_grades():
-    if "session" in request.cookies:
+    if "session" in request.cookies and len(request.cookies['session']) > 10:
         browser = setupBrowserWithCookie(request.cookies["session"])
         browser.open('http://siakad.poltektedc.ac.id/politeknik/khs.php')
         if isInLoginPage(browser.get_current_page()):
@@ -136,7 +136,8 @@ def get_grades():
                 "code": item.select('td')[1].text[6:-4],
                 "name": item.select('td')[3].text,
                 "credit": item.select('td')[4].text[6:-4],
-                "grade": item.select('td option["selected"]')[0].text[:-8],
+                "grade": item.select('td option["selected"]')[0].text[:-8] \
+                if item.select('td option["selected"]') else '-',
             })
 
         return make_response(jsonify(data), 200)
